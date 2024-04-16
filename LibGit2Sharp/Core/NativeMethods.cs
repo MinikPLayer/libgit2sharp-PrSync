@@ -82,6 +82,9 @@ namespace LibGit2Sharp.Core
 
             if (libraryName == libgit2)
             {
+                if (!(OperatingSystem.IsWindows() || OperatingSystem.IsLinux()))
+                    throw new NotSupportedException("Only Windows and Linux is supported.");
+
                 // Use GlobalSettings.NativeLibraryPath when set.
                 string nativeLibraryPath = GetGlobalSettingsNativeLibraryPath();
 
@@ -96,26 +99,20 @@ namespace LibGit2Sharp.Core
                     return handle;
                 }
 
-                // We carry a number of .so files for Linux which are linked against various
-                // libc/OpenSSL libraries. Try them out.
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                // The libraries are located at 'runtimes/<rid>/native/lib{libraryName}.so'
+                string assemblyDirectory = Path.GetDirectoryName(AppContext.BaseDirectory);
+                string processorArchitecture = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
+                string runtimesDirectory = Path.Combine(assemblyDirectory, "runtimes");
+
+                if (Directory.Exists(runtimesDirectory))
                 {
-                    // The libraries are located at 'runtimes/<rid>/native/lib{libraryName}.so'
-                    // The <rid> ends with the processor architecture. e.g. fedora-x64.
-                    string assemblyDirectory = Path.GetDirectoryName(AppContext.BaseDirectory);
-                    string processorArchitecture = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
-                    string runtimesDirectory = Path.Combine(assemblyDirectory, "runtimes");
-
-                    if (Directory.Exists(runtimesDirectory))
+                    foreach (var runtimeFolder in Directory.GetDirectories(runtimesDirectory, $"*-{processorArchitecture}"))
                     {
-                        foreach (var runtimeFolder in Directory.GetDirectories(runtimesDirectory, $"*-{processorArchitecture}"))
-                        {
-                            string libPath = Path.Combine(runtimeFolder, "native", $"{libraryName}.so");
+                        string libPath = Path.Combine(runtimeFolder, "native", OperatingSystem.IsLinux() ? $"{libraryName}.so" : $"{libraryName}.dll");
 
-                            if (NativeLibrary.TryLoad(libPath, out handle))
-                            {
-                                return handle;
-                            }
+                        if (NativeLibrary.TryLoad(libPath, out handle))
+                        {
+                            return handle;
                         }
                     }
                 }
