@@ -1,0 +1,3 @@
+[submodule "libgit2sharp.nativebinaries-prsync"]
+	path = libgit2sharp.nativebinaries-prsync
+	url = https://github.com/MinikPLayer/libgit2sharp.nativebinaries-prsync.git
